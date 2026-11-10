@@ -16,17 +16,7 @@ class SessaoApp extends StatelessWidget {
   }
 }
 
-class SessaoEstudo {
-  final String tema;
-  final int minutos;
-  final String observacao;
-
-  const SessaoEstudo({
-    required this.tema,
-    required this.minutos,
-    required this.observacao,
-  });
-}
+// Cada sessão será um Map<String, Object> com id, tema, minutos e observacao.
 
 class TelaInicio extends StatefulWidget {
   const TelaInicio({super.key});
@@ -36,35 +26,74 @@ class TelaInicio extends StatefulWidget {
 }
 
 class _TelaInicioState extends State<TelaInicio> {
-  SessaoEstudo? _ultimaSessao;
+  final List<Map<String, Object>> _sessoes = [];
+  int _proximoId = 1;
 
   String resumoSessao() {
-    final sessao = _ultimaSessao;
-    if (sessao == null) {
-      return 'Nenhuma sessão confirmada.';
-    }
-    final observacao = sessao.observacao.isEmpty
-        ? 'Sem observação'
-        : sessao.observacao;
-    return 'Tema: ${sessao.tema}\n'
-        'Duração: ${sessao.minutos} minutos\n'
-        'Observação: $observacao';
+    return 'Sessões nesta execução: ${_sessoes.length}';
   }
 
+  Future<void> excluirSessao(Map<String, Object> sessao) async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir sessão?'),
+        content: Text(
+          'Excluir "${(sessao['tema'] as String)}" (ID ${(sessao['id'] as int)})?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop<bool>(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop<bool>(dialogContext, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmou != true) {
+      return;
+    }
+    setState(() {
+      _sessoes.removeWhere(
+        (item) => (item['id'] as int) == (sessao['id'] as int),
+      );
+    });
+  }
 
-  Future<void> abrirFormulario() async {
-    final resultado = await Navigator.push<SessaoEstudo>(
+  Future<void> abrirFormulario({Map<String, Object>? sessao}) async {
+    final resultado = await Navigator.push<Map<String, Object>>(
       context,
-      MaterialPageRoute<SessaoEstudo>(
-        builder: (context) => const TelaFormulario(),
+      MaterialPageRoute<Map<String, Object>>(
+        builder: (context) => TelaFormulario(sessao: sessao),
       ),
     );
     if (!mounted || resultado == null) {
       return;
     }
-    setState(() {
-      _ultimaSessao = resultado;
-    });
+    if (sessao == null) {
+      setState(() {
+        _sessoes.add(<String, Object>{
+          'id': _proximoId,
+          'tema': (resultado['tema'] as String),
+          'minutos': (resultado['minutos'] as int),
+          'observacao': (resultado['observacao'] as String),
+        });
+        _proximoId++;
+      });
+    } else {
+      final index = _sessoes.indexWhere(
+        (item) => (item['id'] as int) == (sessao['id'] as int),
+      );
+      if (index == -1) {
+        return;
+      }
+      setState(() {
+        _sessoes[index] = resultado;
+      });
+    }
   }
 
   @override
@@ -72,34 +101,86 @@ class _TelaInicioState extends State<TelaInicio> {
     return Scaffold(
       appBar: AppBar(title: const Text('Minhas sessões')),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.menu_book, size: 64, color: Colors.indigo),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(resumoSessao()),
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: abrirFormulario,
-                child: const Text('Nova sessão'),
-              ),
-            ],
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(resumoSessao()),
+            ),
+            Expanded(
+              child: _sessoes.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Nenhuma sessão. Toque em Cadastrar para começar.',
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _sessoes.length,
+                      itemBuilder: (context, index) {
+                        final sessao = _sessoes[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                ListTile(
+                                  leading: CircleAvatar(
+                                    child: Text('${(sessao['id'] as int)}'),
+                                  ),
+                                  title: Text((sessao['tema'] as String)),
+                                  subtitle: Text(
+                                    '${(sessao['minutos'] as int)} minutos\n'
+                                    '${(sessao['observacao'] as String).isEmpty ? "Sem observação" : (sessao['observacao'] as String)}',
+                                  ),
+                                ),
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 8,
+                                  alignment: WrapAlignment.end,
+                                  children: [
+                                    TextButton.icon(
+                                      onPressed: () =>
+                                          abrirFormulario(sessao: sessao),
+                                      icon: const Icon(Icons.edit_outlined),
+                                      label: const Text('Editar'),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: () => excluirSessao(sessao),
+                                      icon: const Icon(Icons.delete_outline),
+                                      label: const Text('Excluir'),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: abrirFormulario,
+        tooltip: 'Nova sessão',
+        icon: const Icon(Icons.add),
+        label: const Text('Cadastrar'),
       ),
     );
   }
 }
 
 class TelaFormulario extends StatefulWidget {
-  const TelaFormulario({super.key});
+  final Map<String, Object>? sessao;
+
+  const TelaFormulario({super.key, this.sessao});
 
   @override
   State<TelaFormulario> createState() => _TelaFormularioState();
@@ -112,13 +193,23 @@ class _TelaFormularioState extends State<TelaFormulario> {
   final _observacaoController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    final sessao = widget.sessao;
+    if (sessao != null) {
+      _temaController.text = (sessao['tema'] as String);
+      _minutosController.text = (sessao['minutos'] as int).toString();
+      _observacaoController.text = (sessao['observacao'] as String);
+    }
+  }
+
+  @override
   void dispose() {
     _temaController.dispose();
     _minutosController.dispose();
     _observacaoController.dispose();
     super.dispose();
   }
-
 
   void confirmar() {
     final valido = _formKey.currentState?.validate() ?? false;
@@ -129,18 +220,21 @@ class _TelaFormularioState extends State<TelaFormulario> {
     if (minutos == null) {
       return;
     }
-    final sessao = SessaoEstudo(
-      tema: _temaController.text.trim(),
-      minutos: minutos,
-      observacao: _observacaoController.text.trim(),
-    );
-    Navigator.pop<SessaoEstudo>(context, sessao);
+    final sessao = <String, Object>{
+      'id': widget.sessao?['id'] ?? 0,
+      'tema': _temaController.text.trim(),
+      'minutos': minutos,
+      'observacao': _observacaoController.text.trim(),
+    };
+    Navigator.pop<Map<String, Object>>(context, sessao);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nova sessão')),
+      appBar: AppBar(
+        title: Text(widget.sessao == null ? 'Nova sessão' : 'Editar sessão'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
