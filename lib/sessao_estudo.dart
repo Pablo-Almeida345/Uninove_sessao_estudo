@@ -10,7 +10,6 @@ class SessaoEstudo {
     required this.minutos,
     required this.observacao,
   });
-
   Map<String, Object?> toMap() {
     return {
       if (id != null) 'id': id,
@@ -19,7 +18,6 @@ class SessaoEstudo {
       'observacao': observacao,
     };
   }
-
   factory SessaoEstudo.fromMap(Map<String, Object?> mapa) {
     return SessaoEstudo(
       id: mapa['id'] as int,

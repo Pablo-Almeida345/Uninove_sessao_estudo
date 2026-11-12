@@ -1,6 +1,5 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-
 import 'sessao_estudo.dart';
 
 class BancoSessoes {
@@ -14,7 +13,6 @@ class BancoSessoes {
       rethrow;
     }
   }
-
   Future<Database> abrirBanco() async {
     final pasta = await getDatabasesPath();
     final caminho = join(pasta, 'sessoes.db');
@@ -33,12 +31,10 @@ class BancoSessoes {
       },
     );
   }
-
   Future<int> cadastrar(SessaoEstudo sessao) async {
     final banco = await database;
     return banco.insert('sessoes', sessao.toMap());
   }
-
   Future<List<SessaoEstudo>> listar() async {
     final banco = await database;
     final linhas = await banco.query(
@@ -47,5 +43,28 @@ class BancoSessoes {
       orderBy: 'id DESC',
     );
     return linhas.map((linha) => SessaoEstudo.fromMap(linha)).toList();
+  }
+  Future<int> atualizar(SessaoEstudo sessao) async {
+    final id = sessao.id;
+    if (id == null) {
+      throw ArgumentError('Atualização exige ID.');
+    }
+    final banco = await database;
+    final valores = sessao.toMap();
+    valores.remove('id');
+    return banco.update(
+      'sessoes',
+      valores,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+  Future<int> excluir(int id) async {
+    final banco = await database;
+    return banco.delete(
+      'sessoes',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }
