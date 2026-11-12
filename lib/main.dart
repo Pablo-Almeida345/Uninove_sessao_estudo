@@ -1,13 +1,17 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'banco_sessoes.dart';
 import 'sessao_estudo.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+  if (kIsWeb) {
+    databaseFactory = databaseFactoryFfiWeb;
+  } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
@@ -98,7 +102,9 @@ class _TelaInicioState extends State<TelaInicio> {
       if (!mounted) return;
       if (afetadas != 1) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registro não encontrado. A lista será consultada.')),
+          const SnackBar(
+            content: Text('Registro não encontrado. A lista será consultada.'),
+          ),
         );
         await carregarSessoes();
         return;
@@ -106,18 +112,24 @@ class _TelaInicioState extends State<TelaInicio> {
       gravou = true;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(sessao == null
-            ? 'Sessão cadastrada.'
-            : 'Sessão atualizada.')),
+        SnackBar(
+          content: Text(
+            sessao == null ? 'Sessão cadastrada.' : 'Sessão atualizada.',
+          ),
+        ),
       );
       await carregarSessoes();
     } catch (erro) {
       debugPrint('Falha ao salvar sessão: $erro');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(gravou
-            ? 'Sessão salva. Use Consultar para atualizar a lista.'
-            : 'Não foi possível salvar a alteração. Abra o formulário e tente novamente.')),
+        SnackBar(
+          content: Text(
+            gravou
+                ? 'Sessão salva. Use Consultar para atualizar a lista.'
+                : 'Não foi possível salvar a alteração. Abra o formulário e tente novamente.',
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -137,7 +149,9 @@ class _TelaInicioState extends State<TelaInicio> {
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Excluir sessão?'),
-          content: Text('Remover ID $id: ${sessao.tema}? Esta ação não tem desfazer.'),
+          content: Text(
+            'Remover ID $id: ${sessao.tema}? Esta ação não tem desfazer.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop<bool>(dialogContext, false),
@@ -155,18 +169,26 @@ class _TelaInicioState extends State<TelaInicio> {
       excluiu = afetadas == 1;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(excluiu
-            ? 'Sessão excluída.'
-            : 'Registro não encontrado. A lista será consultada.')),
+        SnackBar(
+          content: Text(
+            excluiu
+                ? 'Sessão excluída.'
+                : 'Registro não encontrado. A lista será consultada.',
+          ),
+        ),
       );
       await carregarSessoes();
     } catch (erro) {
       debugPrint('Falha ao excluir sessão: $erro');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(excluiu
-            ? 'Exclusão concluída. Use Consultar para atualizar a lista.'
-            : 'Não foi possível excluir. Consulte antes de tentar novamente.')),
+        SnackBar(
+          content: Text(
+            excluiu
+                ? 'Exclusão concluída. Use Consultar para atualizar a lista.'
+                : 'Não foi possível excluir. Consulte antes de tentar novamente.',
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -215,8 +237,10 @@ class _TelaInicioState extends State<TelaInicio> {
                 ListTile(
                   leading: CircleAvatar(child: Text('${sessao.id}')),
                   title: Text(sessao.tema),
-                  subtitle: Text('${sessao.minutos} minutos\n'
-                      '${sessao.observacao.isEmpty ? "Sem observação" : sessao.observacao}'),
+                  subtitle: Text(
+                    '${sessao.minutos} minutos\n'
+                    '${sessao.observacao.isEmpty ? "Sem observação" : sessao.observacao}',
+                  ),
                 ),
                 Wrap(
                   spacing: 8,
